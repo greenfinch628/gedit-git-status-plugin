@@ -5,7 +5,7 @@ and [Gitea](ssh://git@scopuli:2224/scopuli/gedit-git-status-plugin.git).
 The plugin's module and installed filenames remain `git-status` on both hosts.
 
 A standalone, read-only plugin for gedit 50 and gedit+ 50 on Fedora 44.
-Adds Git badges beside names in the existing File Browser, including the
+Adds Git badges in the first column, before icons and names in the File Browser, including the
 gedit+ Workspace view. It does not change gedit core or filenames.
 
 Enable **File Browser** and **Git Status** in Preferences → Plugins. Disable

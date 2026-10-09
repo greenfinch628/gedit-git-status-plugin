@@ -81,7 +81,7 @@ static void attach(GitStatus *self)
     self->column=gtk_tree_view_column_new();
     gtk_tree_view_column_pack_start(self->column,cell,FALSE);
     gtk_tree_view_column_set_cell_data_func(self->column,cell,badge,self,NULL);
-    gtk_tree_view_append_column(view,self->column);
+    gtk_tree_view_insert_column(view,self->column,0);
     self->old_tooltip=gtk_widget_get_has_tooltip(GTK_WIDGET(view));
     gtk_widget_set_has_tooltip(GTK_WIDGET(view),TRUE);
     self->tooltip_handler=g_signal_connect(view,"query-tooltip",G_CALLBACK(tooltip),self);

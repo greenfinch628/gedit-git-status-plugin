@@ -62,7 +62,7 @@ int main(int argc,char **argv)
     PeasExtension *extension=peas_engine_create_extension(engine,plugin,GEDIT_TYPE_WINDOW_ACTIVATABLE,"window",window,NULL);
     gedit_window_activatable_activate(GEDIT_WINDOW_ACTIVATABLE(extension)); pump(3);
     g_assert_cmpint(gtk_tree_view_get_n_columns(view),==,before+1);
-    GtkTreeViewColumn *column=gtk_tree_view_get_column(view,before);
+    GtkTreeViewColumn *column=gtk_tree_view_get_column(view,0);
     gtk_tree_model_foreach(gtk_tree_view_get_model(view),check_badge,column);
     g_assert_nonnull(g_object_get_data(G_OBJECT(column),"verified"));
     gedit_window_activatable_deactivate(GEDIT_WINDOW_ACTIVATABLE(extension));
