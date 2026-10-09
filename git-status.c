@@ -77,8 +77,11 @@ static void attach(GitStatus *self)
     detach(self); self->view=view;
     if (!view) return;
     GtkCellRenderer *cell=gtk_cell_renderer_text_new();
-    g_object_set(cell,"xpad",6,NULL);
+    g_object_set(cell,"xpad",8,"xalign",0.5f,"family","monospace",NULL);
     self->column=gtk_tree_view_column_new();
+    gtk_tree_view_column_set_sizing(self->column,GTK_TREE_VIEW_COLUMN_FIXED);
+    gtk_tree_view_column_set_fixed_width(self->column,44);
+    gtk_tree_view_column_set_min_width(self->column,44);
     gtk_tree_view_column_pack_start(self->column,cell,FALSE);
     gtk_tree_view_column_set_cell_data_func(self->column,cell,badge,self,NULL);
     gtk_tree_view_insert_column(view,self->column,0);
