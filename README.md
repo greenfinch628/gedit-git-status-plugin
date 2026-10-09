@@ -1,9 +1,8 @@
 # gedit-git-status-plugin
 
-Source repositories: [GitHub](https://github.com/greenfinch628/-gedit-git-status-plugin)
+Source repositories: [GitHub](https://github.com/greenfinch628/gedit-git-status-plugin)
 and [Gitea](ssh://git@scopuli:2224/scopuli/gedit-git-status-plugin.git).
-The GitHub repository name includes a leading hyphen. The plugin's module and
-installed filenames remain `git-status` on both hosts.
+The plugin's module and installed filenames remain `git-status` on both hosts.
 
 A standalone, read-only plugin for gedit 50 and gedit+ 50 on Fedora 44.
 Adds Git badges beside names in the existing File Browser, including the
