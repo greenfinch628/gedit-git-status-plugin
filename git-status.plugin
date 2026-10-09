@@ -1,0 +1,7 @@
+[Plugin]
+Module=git-status
+IAge=3
+Name=Git Status
+Description=Read-only Git badges and branch information in the File Browser.
+Authors=gedit-git-status contributors
+Version=0.1.0
