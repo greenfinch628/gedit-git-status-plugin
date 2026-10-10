@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include <libpeas/peas.h>
+#include <string.h>
 #include <gedit/gedit-window.h>
 #include <gedit/gedit-window-activatable.h>
 #include <gedit/gedit-message-bus.h>
@@ -13,6 +14,7 @@ typedef struct {
     GeditWindow *window;
     GtkTreeView *view;
     GtkTreeViewColumn *column;
+    GtkTreeViewColumn *old_expander; 
     GCancellable *cancel;
     GitSnapshot *snapshot;
     gchar *directory;
@@ -41,7 +43,12 @@ static void badge(GtkTreeViewColumn *column, GtkCellRenderer *cell,
         if (file) { path=g_file_get_path(file); g_object_unref(file); }
         if (path) code=g_hash_table_lookup(self->snapshot->codes,path);
     }
-    g_object_set(cell,"text",code ? code : "",NULL); g_free(path);
+    const gchar *color="#3584e4";
+    if (code && g_str_equal(code,"??")) color="#9141ac";
+    else if (code && (strchr(code,'U') || g_str_equal(code,"AA") || g_str_equal(code,"DD"))) color="#e01b24";
+    else if (code && strchr(code,'A')) color="#2e8b57";
+    g_object_set(cell,"text",code ? code : "","foreground",color,
+                 "foreground-set",code!=NULL,NULL); g_free(path);
 }
 static gboolean tooltip(GtkWidget *widget, gint x, gint y, gboolean keyboard,
                          GtkTooltip *tip, gpointer data)
@@ -49,9 +56,45 @@ static gboolean tooltip(GtkWidget *widget, gint x, gint y, gboolean keyboard,
     GitStatus *self=data; GtkTreeViewColumn *column=NULL;
     if (!self->snapshot || keyboard) return FALSE;
     gtk_tree_view_convert_widget_to_bin_window_coords(self->view,x,y,&x,&y);
-    if (!gtk_tree_view_get_path_at_pos(self->view,x,y,NULL,&column,NULL,NULL) ||
-        column!=self->column) return FALSE;
-    gchar *text=g_strdup_printf("Branch: %s\nGit index / working tree status\n●: changes below this folder\nDisk status; save edits to update Git status.",self->snapshot->branch);
+    GtkTreePath *row=NULL;
+    if (!gtk_tree_view_get_path_at_pos(self->view,x,y,&row,&column,NULL,NULL)) return FALSE;
+    if (column!=self->column) { gtk_tree_path_free(row); return FALSE; }
+    GtkTreeModel *model=gtk_tree_view_get_model(self->view);
+    GtkTreeIter iter; GFile *file=NULL; gchar *path=NULL;
+    if (valid_model(model) && gtk_tree_model_get_iter(model,&iter,row))
+        gtk_tree_model_get(model,&iter,LOCATION_COLUMN,&file,-1);
+    gtk_tree_path_free(row);
+    if (file) { path=g_file_get_path(file); g_object_unref(file); }
+    const gchar *code=path ? g_hash_table_lookup(self->snapshot->codes,path) : NULL;
+    g_free(path);
+    if (!code) return FALSE;
+    gchar *description=NULL;
+    if (g_str_equal(code,"●")) description=g_strdup("Changes in this folder or its subfolders");
+    else if (g_str_equal(code,"??")) description=g_strdup("Untracked file");
+    else if (strchr(code,'U') || g_str_equal(code,"AA") || g_str_equal(code,"DD"))
+        description=g_strdup("Unresolved merge conflict");
+    else {
+        GString *details=g_string_new(NULL);
+        for (guint i=0;i<2;i++) {
+            const gchar *meaning=NULL;
+            switch (code[i]) {
+            case 'M': meaning="Modified"; break;
+            case 'A': meaning="Added"; break;
+            case 'D': meaning="Deleted"; break;
+            case 'R': meaning="Renamed"; break;
+            case 'C': meaning="Copied"; break;
+            case 'T': meaning="File type changed"; break;
+            default: break;
+            }
+            if (meaning) {
+                if (details->len) g_string_append(details,"; ");
+                g_string_append_printf(details,"%s (%s)",meaning,i==0 ? "staged" : "not staged");
+            }
+        }
+        description=g_string_free(details,FALSE);
+    }
+    gchar *text=g_strdup_printf("%s\nBranch: %s",description,self->snapshot->branch);
+    g_free(description);
     gtk_tooltip_set_text(tip,text); g_free(text); return TRUE;
 }
 static void detach(GitStatus *self)
@@ -59,6 +102,7 @@ static void detach(GitStatus *self)
     if (self->view) {
         g_signal_handler_disconnect(self->view,self->tooltip_handler);
         gtk_widget_set_has_tooltip(GTK_WIDGET(self->view),self->old_tooltip);
+        gtk_tree_view_set_expander_column(self->view,self->old_expander);
         gtk_tree_view_remove_column(self->view,self->column);
         g_clear_object(&self->view);
     }
@@ -77,14 +121,17 @@ static void attach(GitStatus *self)
     detach(self); self->view=view;
     if (!view) return;
     GtkCellRenderer *cell=gtk_cell_renderer_text_new();
-    g_object_set(cell,"xpad",8,"xalign",0.5f,"family","monospace",NULL);
+    g_object_set(cell,"xpad",8,"xalign",0.0f,"weight",PANGO_WEIGHT_BOLD,"family","monospace",NULL);
     self->column=gtk_tree_view_column_new();
     gtk_tree_view_column_set_sizing(self->column,GTK_TREE_VIEW_COLUMN_FIXED);
     gtk_tree_view_column_set_fixed_width(self->column,44);
     gtk_tree_view_column_set_min_width(self->column,44);
     gtk_tree_view_column_pack_start(self->column,cell,FALSE);
     gtk_tree_view_column_set_cell_data_func(self->column,cell,badge,self,NULL);
+    self->old_expander=gtk_tree_view_get_expander_column(view);
+    GtkTreeViewColumn *names=gtk_tree_view_get_column(view,0);
     gtk_tree_view_insert_column(view,self->column,0);
+    gtk_tree_view_set_expander_column(view,names);
     self->old_tooltip=gtk_widget_get_has_tooltip(GTK_WIDGET(view));
     gtk_widget_set_has_tooltip(GTK_WIDGET(view),TRUE);
     self->tooltip_handler=g_signal_connect(view,"query-tooltip",G_CALLBACK(tooltip),self);
